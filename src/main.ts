@@ -17,6 +17,8 @@ const username: string = process.env.REDIS_USERNAME!;
 const password: string = process.env.REDIS_PASSWORD!;
 const channelName: string = process.env.CHANNEL_NAME!;
 const broadcasterId: string = process.env.BROADCASTER_ID!;
+const botId: string = process.env.BOT_ID!;
+const botSecret: string = process.env.BOT_SECRET!;
 
 const redis = new Redis({
   host, port, username, password,
@@ -38,6 +40,16 @@ const main = async () => {
     tokenData,
   );
 
+  const botTokenData = JSON.parse(await fs.readFile('src/botTokens.json', 'utf8'));
+  const botAuthProvider = new RefreshingAuthProvider(
+    {
+      clientId: botId,
+      clientSecret: botSecret,
+      onRefresh: async (newBotTokenData) => await fs.writeFile('src/botTokens.json', JSON.stringify(newBotTokenData, null, 4), 'utf8'),
+    },
+    botTokenData,
+  );
+
   const startRaffle = async () => {
     const twitchApi: ApiClient = new ApiClient({ authProvider });
     console.log(twitchApi);
@@ -55,12 +67,9 @@ const main = async () => {
     await twitchApi.channelPoints.deleteCustomReward(broadcasterId, raffleId);
   };
 
-  const chatClient = new ChatClient({ authProvider, channels: [channelName] });
+  const chatClient = new ChatClient({ authProvider: botAuthProvider, channels: [channelName] });
   await chatClient.connect();
 
-  // TODO: Puede haber mas de 1 ganador
-  // TODO: Cancelar el sorteo si hay algun error de tipeo
-  // TODO: Agregar anuncio en OBS
   chatClient.onMessage(async (channel, user, message) => {
     if (message === 'ping') {
       chatClient.say(channel, 'pong');
@@ -68,25 +77,36 @@ const main = async () => {
       const diceRoll = Math.floor(Math.random() * 6) + 1;
       chatClient.say(channel, `@${user} sacaste un ${diceRoll}`);
     } else if (channel === `#${user}` && message.startsWith('!sorteo')) {
-      const minutes: any = message.split(' ').pop();
-      const ms: number = Math.floor(+minutes * 60000);
+      const minutes: any = message.split(' ');
+      const ms: number = Math.floor(+minutes[1] * 60000);
       const createReward = await startRaffle();
       console.log('Se inicia el Sorteo', createReward);
-      if (minutes > 1) {
-        chatClient.announce(channel, `Se sorteará en ${minutes} minutos`);
+      if (minutes[1] > 1) {
+        chatClient.announce(channel, `Se sorteará en ${minutes[1]} minutos`);
       } else {
-        chatClient.announce(channel, `Se sorteará en ${minutes} minuto`);
+        chatClient.announce(channel, `Se sorteará en ${minutes[1]} minuto`);
       }
-      console.log('Se sorteará en ', minutes, ' minuto(s)');
+      console.log('Se sorteará en ', minutes[1], ' minuto(s)');
       await setTimeout(ms);
       await endRaffle(createReward);
       const participants = await getAllParticipants();
-      const random = Math.floor(Math.random() * participants.length);
-      chatClient.announce(channel, `@${participants[random]} gana el sorteo molienWink molienWink molienWink`);
+      const random: any = [];
+      for (let i = 0; i < minutes[2]; i++) {
+        const randomize = Math.floor(Math.random() * participants.length);
+        random.push(randomize);
+      }
+      if (minutes[2] > 1) {
+        let winnerText: string = 'Los ganadores son: ';
+        for (const winner in random) {
+          winnerText += `@${participants[random[winner]]} `;
+        }
+        chatClient.announce(channel, winnerText);
+      } else {
+        chatClient.announce(channel, `@${participants[random[0]]} gana el sorteo molienWink molienWink molienWink`);
+      }
       console.log('Sorteo Finalizado');
       await redis.del('user-list');
       await setTimeout(100);
-      chatClient.say(channel, `@${participants[random]} gana el sorteo molienWink molienWink molienWink`);
     }
   });
 
