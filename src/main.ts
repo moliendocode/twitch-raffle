@@ -1,3 +1,6 @@
+/* eslint-disable guard-for-in */
+/* eslint-disable no-plusplus */
+/* eslint-disable no-restricted-syntax */
 /* eslint-disable no-return-await */
 /* eslint-disable no-console */
 import { ChatClient } from '@twurple/chat';
