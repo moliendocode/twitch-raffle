@@ -9,16 +9,16 @@ import { RefreshingAuthProvider } from '@twurple/auth';
 import { promises as fs } from 'fs';
 import { setTimeout } from 'timers/promises';
 
-const clientId: string = process.env.CLIENT_ID!;
-const clientSecret: string = process.env.CLIENT_SECRET!;
+const userClientId: string = process.env.CLIENT_ID!;
+const userClientSecret: string = process.env.CLIENT_SECRET!;
 const host: string = process.env.REDIS_HOSTNAME!;
 const port: number = +process.env.REDIS_PORT!;
 const username: string = process.env.REDIS_USERNAME!;
 const password: string = process.env.REDIS_PASSWORD!;
 const channelName: string = process.env.CHANNEL_NAME!;
 const broadcasterId: string = process.env.BROADCASTER_ID!;
-const botId: string = process.env.BOT_ID!;
-const botSecret: string = process.env.BOT_SECRET!;
+// const botId: string = process.env.BOT_ID!;
+// const botSecret: string = process.env.BOT_SECRET!;
 
 const redis = new Redis({
   host, port, username, password,
@@ -33,22 +33,22 @@ const main = async () => {
   const tokenData = JSON.parse(await fs.readFile('src/tokens.json', 'utf8'));
   const authProvider = new RefreshingAuthProvider(
     {
-      clientId,
-      clientSecret,
+      clientId: userClientId,
+      clientSecret: userClientSecret,
       onRefresh: async (newTokenData) => await fs.writeFile('src/tokens.json', JSON.stringify(newTokenData, null, 4), 'utf8'),
     },
     tokenData,
   );
 
-  const botTokenData = JSON.parse(await fs.readFile('src/botTokens.json', 'utf8'));
-  const botAuthProvider = new RefreshingAuthProvider(
-    {
-      clientId: botId,
-      clientSecret: botSecret,
-      onRefresh: async (newBotTokenData) => await fs.writeFile('src/botTokens.json', JSON.stringify(newBotTokenData, null, 4), 'utf8'),
-    },
-    botTokenData,
-  );
+  // const botTokenData = JSON.parse(await fs.readFile('src/botTokens.json', 'utf8'));
+  // const botAuthProvider = new RefreshingAuthProvider(
+  //   {
+  //     clientId: botId,
+  //     clientSecret: botSecret,
+  //     onRefresh: async (newBotTokenData) => await fs.writeFile('src/botTokens.json', JSON.stringify(newBotTokenData, null, 4), 'utf8'),
+  //   },
+  //   botTokenData,
+  // );
 
   const startRaffle = async () => {
     const twitchApi: ApiClient = new ApiClient({ authProvider });
@@ -67,7 +67,7 @@ const main = async () => {
     await twitchApi.channelPoints.deleteCustomReward(broadcasterId, raffleId);
   };
 
-  const chatClient = new ChatClient({ authProvider: botAuthProvider, channels: [channelName] });
+  const chatClient = new ChatClient({ authProvider, channels: [channelName] });
   await chatClient.connect();
 
   chatClient.onMessage(async (channel, user, message) => {
@@ -100,6 +100,7 @@ const main = async () => {
         for (const winner in random) {
           winnerText += `@${participants[random[winner]]} `;
         }
+        winnerText += ' molienWink';
         chatClient.announce(channel, winnerText);
       } else {
         chatClient.announce(channel, `@${participants[random[0]]} gana el sorteo molienWink molienWink molienWink`);
