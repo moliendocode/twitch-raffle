@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 /* eslint-disable guard-for-in */
 /* eslint-disable no-plusplus */
 /* eslint-disable no-restricted-syntax */
@@ -9,7 +10,7 @@ import { PubSubClient } from '@twurple/pubsub';
 import { ApiClient } from '@twurple/api';
 import Redis from 'ioredis';
 import { RefreshingAuthProvider } from '@twurple/auth';
-import { promises as fs } from 'fs';
+import { promises as fs, existsSync } from 'fs';
 import { setTimeout } from 'timers/promises';
 
 const userClientId: string = process.env.CLIENT_ID!;
@@ -23,6 +24,14 @@ const broadcasterId: string = process.env.BROADCASTER_ID!;
 // const botId: string = process.env.BOT_ID!;
 // const botSecret: string = process.env.BOT_SECRET!;
 
+interface TokenData {
+  accessToken: string;
+  refreshToken: string;
+  scope: string[];
+  expiresIn: number;
+  obtainmentTimestamp: number;
+}
+
 const redis = new Redis({
   host, port, username, password,
 });
@@ -33,7 +42,24 @@ const getAllParticipants = async () => {
 };
 
 const main = async () => {
-  const tokenData = JSON.parse(await fs.readFile('src/tokens.json', 'utf8'));
+  let tokenData: TokenData;
+  if (existsSync('src/tokens.json')) {
+    tokenData = JSON.parse(await fs.readFile('src/tokens.json', 'utf8'));
+  } else {
+    tokenData = {
+      accessToken: process.env.ACCESS_TOKEN!,
+      refreshToken: process.env.REFRESH_TOKEN!,
+      scope: ['channel:manage:redemptions',
+        'channel:moderate',
+        'channel:read:hype_train',
+        'channel:read:redemptions',
+        'channel:read:subscriptions',
+        'chat:edit',
+        'chat:read'],
+      expiresIn: 0,
+      obtainmentTimestamp: 0,
+    };
+  }
   const authProvider = new RefreshingAuthProvider(
     {
       clientId: userClientId,
