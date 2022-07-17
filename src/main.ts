@@ -1,3 +1,5 @@
+/* eslint-disable import/extensions */
+/* eslint-disable import/no-unresolved */
 /* eslint-disable max-len */
 /* eslint-disable guard-for-in */
 /* eslint-disable no-plusplus */
@@ -8,67 +10,17 @@ import { ChatClient } from '@twurple/chat';
 import 'dotenv/config';
 import { PubSubClient } from '@twurple/pubsub';
 import { ApiClient } from '@twurple/api';
-import Redis from 'ioredis';
-import { RefreshingAuthProvider } from '@twurple/auth';
-import { promises as fs, existsSync } from 'fs';
 import { setTimeout } from 'timers/promises';
+import redis from './redis/store';
+import getAllParticipants from './twitch/participants';
+import { authProvider } from './twitch/auth/auth';
 
-const userClientId: string = process.env.CLIENT_ID!;
-const userClientSecret: string = process.env.CLIENT_SECRET!;
-const host: string = process.env.REDIS_HOSTNAME!;
-const port: number = +process.env.REDIS_PORT!;
-const username: string = process.env.REDIS_USERNAME!;
-const password: string = process.env.REDIS_PASSWORD!;
 const channelName: string = process.env.CHANNEL_NAME!;
 const broadcasterId: string = process.env.BROADCASTER_ID!;
 // const botId: string = process.env.BOT_ID!;
 // const botSecret: string = process.env.BOT_SECRET!;
 
-interface TokenData {
-  accessToken: string;
-  refreshToken: string;
-  scope: string[];
-  expiresIn: number;
-  obtainmentTimestamp: number;
-}
-
-const redis = new Redis({
-  host, port, username, password,
-});
-
-const getAllParticipants = async () => {
-  const res = await redis.lrange('user-list', 0, -1);
-  return res;
-};
-
 const main = async () => {
-  let tokenData: TokenData;
-  if (existsSync('src/tokens.json')) {
-    tokenData = JSON.parse(await fs.readFile('src/tokens.json', 'utf8'));
-  } else {
-    tokenData = {
-      accessToken: process.env.ACCESS_TOKEN!,
-      refreshToken: process.env.REFRESH_TOKEN!,
-      scope: ['channel:manage:redemptions',
-        'channel:moderate',
-        'channel:read:hype_train',
-        'channel:read:redemptions',
-        'channel:read:subscriptions',
-        'chat:edit',
-        'chat:read'],
-      expiresIn: 0,
-      obtainmentTimestamp: 0,
-    };
-  }
-  const authProvider = new RefreshingAuthProvider(
-    {
-      clientId: userClientId,
-      clientSecret: userClientSecret,
-      onRefresh: async (newTokenData) => await fs.writeFile('src/tokens.json', JSON.stringify(newTokenData, null, 4), 'utf8'),
-    },
-    tokenData,
-  );
-
   // const botTokenData = JSON.parse(await fs.readFile('src/botTokens.json', 'utf8'));
   // const botAuthProvider = new RefreshingAuthProvider(
   //   {
@@ -118,7 +70,7 @@ const main = async () => {
       console.log('Se sorteará en ', minutes[1], ' minuto(s)');
       await setTimeout(ms);
       await endRaffle(createReward);
-      const participants = await getAllParticipants();
+      const participants = await getAllParticipants(redis, 'user-list');
       const random: any = [];
       for (let i = 0; i < minutes[2]; i++) {
         const randomize = Math.floor(Math.random() * participants.length);
