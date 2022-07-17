@@ -1,3 +1,4 @@
+/* eslint-disable import/prefer-default-export */
 /* eslint-disable import/extensions */
 /* eslint-disable import/no-unresolved */
 /* eslint-disable max-len */
@@ -6,52 +7,22 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-return-await */
 /* eslint-disable no-console */
-import { ChatClient } from '@twurple/chat';
 import 'dotenv/config';
 import { PubSubClient } from '@twurple/pubsub';
-import { ApiClient } from '@twurple/api';
 import { setTimeout } from 'timers/promises';
-import redis from './redis/store';
-import getAllParticipants from './twitch/participants';
-import { authProvider } from './twitch/auth/auth';
 
-const channelName: string = process.env.CHANNEL_NAME!;
-const broadcasterId: string = process.env.BROADCASTER_ID!;
-// const botId: string = process.env.BOT_ID!;
-// const botSecret: string = process.env.BOT_SECRET!;
+const authProvider = require('./twitch/auth/auth');
+const startRaffle = require('./methods/startRaffle.js');
+const endRaffle = require('./methods/endRaffle.js');
+const chatClient = require('./twitch/chatClient.js');
+
+const getAllParticipants = require('./twitch/participants.js');
+
+const Redis = require('./redis/store.js');
 
 const main = async () => {
-  // const botTokenData = JSON.parse(await fs.readFile('src/botTokens.json', 'utf8'));
-  // const botAuthProvider = new RefreshingAuthProvider(
-  //   {
-  //     clientId: botId,
-  //     clientSecret: botSecret,
-  //     onRefresh: async (newBotTokenData) => await fs.writeFile('src/botTokens.json', JSON.stringify(newBotTokenData, null, 4), 'utf8'),
-  //   },
-  //   botTokenData,
-  // );
-
-  const startRaffle = async () => {
-    const twitchApi: ApiClient = new ApiClient({ authProvider });
-    console.log(twitchApi);
-    const apiCall = await twitchApi.channelPoints.createCustomReward(broadcasterId, {
-      title: 'Sorteo',
-      cost: 1,
-      maxRedemptionsPerUserPerStream: 1,
-      autoFulfill: true,
-    });
-    return apiCall.id;
-  };
-
-  const endRaffle = async (raffleId: string) => {
-    const twitchApi: ApiClient = new ApiClient({ authProvider });
-    await twitchApi.channelPoints.deleteCustomReward(broadcasterId, raffleId);
-  };
-
-  const chatClient = new ChatClient({ authProvider, channels: [channelName] });
-  await chatClient.connect();
-
-  chatClient.onMessage(async (channel, user, message) => {
+  const redis = Redis;
+  chatClient.onMessage(async (channel:any, user:any, message:any) => {
     if (message === 'ping') {
       chatClient.say(channel, 'pong');
     } else if (message === '!dado') {
@@ -95,7 +66,7 @@ const main = async () => {
   const pubSubClient = new PubSubClient();
   const userId = await pubSubClient.registerUserListener(authProvider);
 
-  await pubSubClient.onRedemption(userId, (message) => {
+  await pubSubClient.onRedemption(userId, (message: any) => {
     if (message.rewardTitle === 'Sorteo') {
       redis.lpush('user-list', message.userDisplayName);
     }
@@ -103,3 +74,5 @@ const main = async () => {
 };
 
 main();
+
+export default main;

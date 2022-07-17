@@ -1,5 +1,5 @@
 /* eslint-disable import/prefer-default-export */
-import Redis from 'ioredis';
+const Redis = require('ioredis');
 
 const host: string = process.env.REDIS_HOSTNAME!;
 const port: number = +process.env.REDIS_PORT!;
