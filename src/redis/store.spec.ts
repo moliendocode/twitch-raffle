@@ -5,6 +5,8 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import redis from './store';
 
+// TODO: Mock REDIS
+
 describe('createStore', () => {
   it('should return store', async () => {
     const store = redis;

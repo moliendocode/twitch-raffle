@@ -11,14 +11,13 @@ import 'dotenv/config';
 import { PubSubClient } from '@twurple/pubsub';
 import { setTimeout } from 'timers/promises';
 
-const authProvider = require('./twitch/auth/auth');
-const startRaffle = require('./methods/startRaffle.js');
-const endRaffle = require('./methods/endRaffle.js');
-const chatClient = require('./twitch/chatClient.js');
+import startRaffle from './methods/startRaffle.js';
 
-const getAllParticipants = require('./twitch/participants.js');
-
-const Redis = require('./redis/store.js');
+import endRaffle from './methods/endRaffle.js';
+import chatClient from './twitch/chatClient.js';
+import getAllParticipants from './twitch/participants.js';
+import Redis from './redis/store.js';
+import { authProvider } from './twitch/auth/auth.js';
 
 const main = async () => {
   const redis = Redis;
