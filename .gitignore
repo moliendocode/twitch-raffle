@@ -5,3 +5,4 @@ package-lock.json
 botTokens.json
 coverage
 dist
+.DS_Store
