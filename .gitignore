@@ -1,8 +1,8 @@
 .env
 tokens.json
-node_modules
+/node_modules
 package-lock.json
 botTokens.json
-coverage
-dist
+/coverage
+/dist
 .DS_Store
